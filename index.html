@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Przekształcenia Punktowe</title>
+</head>
+<body>
+    <h1>Przekształcenia Punktowe</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <br>
+    <canvas id="canvas"></canvas>
+    <br>
+    
+    <label>R:</label>
+    <input type="number" id="valueR" value="10">
+    <label>G:</label>
+    <input type="number" id="valueG" value="10">
+    <label>B:</label>
+    <input type="number" id="valueB" value="10">
+    <br>
+
+    <button onclick="add()">Dodawanie</button>
+    <button onclick="subtract()">Odejmowanie</button>
+    <button onclick="multiply()">Mnożenie</button>
+    <button onclick="divide()">Dzielenie</button>
+	<button onclick="resetImage()">Reset</button>
+    <a href="filters.html">Filtry</a>
+    <br>
+    
+    <label>Jasność:</label>
+    <input type="range" id="brightnessSlider" min="-255" max="255" value="0" oninput="adjustBrightness()">
+    <span id="brightnessValue">0</span>
+    <br>
+
+    <button onclick="grayscale8bit()">Skala szarości - 8 bitów</button>
+    <button onclick="grayscale2bit()">Skala szarości - 2 bity</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let imageData;
+        let originalImageData;
+
+        document.getElementById('imageInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function applyTransformation(transformation) {
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = transformation(data[i], "R");     
+                data[i + 1] = transformation(data[i + 1], "G"); 
+                data[i + 2] = transformation(data[i + 2], "B"); 
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function getRGBValues() {
+            const valueR = parseInt(document.getElementById('valueR').value);
+            const valueG = parseInt(document.getElementById('valueG').value);
+            const valueB = parseInt(document.getElementById('valueB').value);
+            return { valueR, valueG, valueB };
+        }
+
+        function add() {
+            const { valueR, valueG, valueB } = getRGBValues();
+            applyTransformation((color, channel) => {
+                if (channel === "R") return Math.min(color + valueR, 255);
+                if (channel === "G") return Math.min(color + valueG, 255);
+                if (channel === "B") return Math.min(color + valueB, 255);
+            });
+        }
+
+        function subtract() {
+            const { valueR, valueG, valueB } = getRGBValues();
+            applyTransformation((color, channel) => {
+                if (channel === "R") return Math.max(color - valueR, 0);
+                if (channel === "G") return Math.max(color - valueG, 0);
+                if (channel === "B") return Math.max(color - valueB, 0);
+            });
+        }
+
+        function multiply() {
+            const { valueR, valueG, valueB } = getRGBValues();
+            applyTransformation((color, channel) => {
+                if (channel === "R") return Math.min(color * valueR, 255);
+                if (channel === "G") return Math.min(color * valueG, 255);
+                if (channel === "B") return Math.min(color * valueB, 255);
+            });
+        }
+
+        function divide() {
+            const { valueR, valueG, valueB } = getRGBValues();
+            applyTransformation((color, channel) => {
+                if (channel === "R") return Math.min(color / (valueR || 1), 255);
+                if (channel === "G") return Math.min(color / (valueG || 1), 255);
+                if (channel === "B") return Math.min(color / (valueB || 1), 255);
+            });
+        }
+
+        function adjustBrightness() {
+            const brightnessValue = parseInt(document.getElementById('brightnessSlider').value);
+            document.getElementById('brightnessValue').textContent = brightnessValue;
+
+            for (let i = 0; i < originalImageData.data.length; i++) {
+                imageData.data[i] = originalImageData.data[i];
+            }
+
+            applyTransformation(color => Math.min(Math.max(color + brightnessValue, 0), 255));
+        }
+
+        function grayscale8bit() {
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                const gray = Math.round(avg);
+                data[i] = data[i + 1] = data[i + 2] = gray;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function grayscale2bit() {
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                const gray = avg < 64 ? 0 : avg < 128 ? 85 : avg < 192 ? 170 : 255;
+                data[i] = data[i + 1] = data[i + 2] = gray;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+		function resetImage() {
+			for (let i = 0; i < originalImageData.data.length; i++) {
+				imageData.data[i] = originalImageData.data[i];
+			}
+			ctx.putImageData(imageData, 0, 0);
+			
+			document.getElementById('brightnessSlider').value = 0;
+			document.getElementById('brightnessValue').textContent = 0;
+		}
+
+    </script>
+</body>
+</html>
